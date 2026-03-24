@@ -1,11 +1,10 @@
-// hooks/useSpeechRecognition.ts
-// Browser Web Speech API wrapper
+"use client"
 
 import { useCallback, useRef } from "react"
 import { Lang } from "@/lib/mathvoice"
 
 export function useSpeechRecognition() {
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   const listen = useCallback((lang: Lang, timeoutMs = 6000): Promise<string | null> => {
     return new Promise((resolve) => {
@@ -32,7 +31,7 @@ export function useSpeechRecognition() {
         }
       }, timeoutMs)
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
+      recognition.onresult = (event: any) => {
         clearTimeout(timeout)
         if (!resolved) {
           resolved = true
