@@ -292,5 +292,3 @@ export default function MathVoice() {
     </main>
   )
 }
-ENDOFFILE
-echo "Done"
