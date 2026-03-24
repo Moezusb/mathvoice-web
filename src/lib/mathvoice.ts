@@ -1,4 +1,3 @@
-"""
 MathVoice — Bilingual Voice Math Tutor for Grade 1–3
 Built on ElevenLabs TTS + SpeechRecognition
 
