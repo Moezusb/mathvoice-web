@@ -71,6 +71,20 @@ function SetupScreen({ onStart }: { onStart: (lang: Lang, grade: Grade) => void 
             : grade === 1 ? "Addition & soustraction jusqu'à 20" : grade === 2 ? "Jusqu'à 100, initiation à la multiplication" : "Toutes les opérations, tables jusqu'à 10"}
         </p>
       </div>
+      <div className="how-it-works">
+        <p className="how-it-works-title">
+          {lang === "en" ? "How it works" : "Comment ça marche"}
+        </p>
+        <p className="how-it-works-step">
+          {lang === "en" ? "🔊  Listen to the question" : "🔊  Écoute la question"}
+        </p>
+        <p className="how-it-works-step">
+          {lang === "en" ? "⏳  7 seconds to think" : "⏳  7 secondes pour réfléchir"}
+        </p>
+        <p className="how-it-works-step">
+          {lang === "en" ? "🎤  Say your answer when you see the mic" : "🎤  Dis ta réponse quand tu vois le micro"}
+        </p>
+      </div>
       <button className="start-btn" onClick={() => onStart(lang, grade)}>
         {lang === "en" ? "Start Session" : "Commencer"}<span className="start-arrow">→</span>
       </button>
