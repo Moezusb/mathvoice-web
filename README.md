@@ -4,6 +4,8 @@
 
 Live demo: [mathvoice-web.vercel.app](https://mathvoice-web.vercel.app)
 
+![MathVoice preview](preview.png)
+
 MathVoice runs entirely in the browser. No app to install. No downloads.
 ElevenLabs voices the questions. The Web Speech API listens for answers.
 The child speaks. MathVoice responds.
@@ -119,12 +121,6 @@ Voice quality is the product for a child learning to listen and respond. Robotic
 - **Emotional expressiveness** — encouragement sounds like encouragement
 
 The bilingual EN/FR capability reflects a real deployment need: French-first learners in Quebec, West Africa, and across the Francophone world deserve the same quality of voice interaction as English-speaking children.
-
----
-
-## Why This Was Built
-
-MathVoice was built as a working proof-of-concept for a Forward Deployed Engineer Strategist application to ElevenLabs — demonstrating that I don't theorize about the technology, I deploy it. The use case (early numeracy, bilingual, voice-first) is also the seed of a larger idea: [Numly](https://github.com/Moezusb), a gamified math learning platform for Grade 1–5 targeting both the West and underserved markets in Africa.
 
 ---
 
