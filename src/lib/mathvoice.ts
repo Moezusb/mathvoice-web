@@ -193,18 +193,47 @@ const WORD_MAP: Record<string, number> = {
   fifty: 50, cinquante: 50,
   sixty: 60, soixante: 60,
   seventy: 70, "soixante-dix": 70,
-  eighty: 80, "quatre-vingts": 80, "quatre-vingt": 80,
-  ninety: 90, "quatre-vingt-dix": 90,
+  eighty: 80, vingts: 20,
+  ninety: 90,
   hundred: 100, cent: 100,
 }
 
+const SKIP_WORDS = new Set(["and", "et", "is", "it's", "its", "c'est", "the", "answer", "la", "réponse", "um", "uh", "euh", "it"])
+
+/**
+ * Pulls a number out of a spoken answer. Handles digits ("21", "21."),
+ * English compounds ("twenty one", "twenty-one", "one hundred"),
+ * and French compounds ("dix-sept", "soixante-quinze", "quatre-vingt-dix").
+ */
 export function extractNumber(text: string): number | null {
   if (!text) return null
-  const tokens = text.toLowerCase().replace(/-/g, " ").split(/\s+/)
+  const clean = text.toLowerCase().replace(/[.,!?;:"]/g, " ")
+
+  const digits = clean.match(/\d+/)
+  if (digits) return parseInt(digits[0], 10)
+
+  const tokens = clean.split(/[\s-]+/).filter(Boolean)
+  let value = 0
+  let found = false
+  let prev: number | null = null
+
   for (const token of tokens) {
-    if (token in WORD_MAP) return WORD_MAP[token]
-    const n = parseInt(token, 10)
-    if (!isNaN(n)) return n
+    if (SKIP_WORDS.has(token)) continue
+    if (!(token in WORD_MAP)) {
+      if (found) break
+      continue
+    }
+    const n = WORD_MAP[token]
+    if (n === 100) {
+      value = (value || 1) * 100
+    } else if (n === 20 && prev === 4 && token.startsWith("vingt")) {
+      // quatre-vingt(s): 4 x 20
+      value = value - 4 + 80
+    } else {
+      value += n
+    }
+    found = true
+    prev = n
   }
-  return null
+  return found ? value : null
 }
