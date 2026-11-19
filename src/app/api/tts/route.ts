@@ -25,6 +25,7 @@ function rateLimited(ip: string): boolean {
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) {
+    console.error("tts: ELEVENLABS_API_KEY is not set")
     return NextResponse.json({ error: "TTS not configured" }, { status: 503 })
   }
 
@@ -58,10 +59,12 @@ export async function POST(req: NextRequest) {
   })
 
   if (!upstream.ok) {
+    console.error(`tts: ElevenLabs returned ${upstream.status}`)
     // 401/402/429 from ElevenLabs usually mean the key is out of credits or rate-limited.
     return NextResponse.json({ error: "TTS unavailable" }, { status: 502 })
   }
 
+  console.log(`tts: ok (${lang}, ${text.length} chars)`)
   return new NextResponse(upstream.body, {
     status: 200,
     headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" },
