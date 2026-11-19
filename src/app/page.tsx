@@ -79,10 +79,10 @@ function SetupScreen({ onStart }: { onStart: (lang: Lang, grade: Grade) => void 
           {lang === "en" ? "🔊  Listen to the question" : "🔊  Écoute la question"}
         </p>
         <p className="how-it-works-step">
-          {lang === "en" ? "⏳  7 seconds to think" : "⏳  7 secondes pour réfléchir"}
+          {lang === "en" ? "⏳  Take your time to think" : "⏳  Prends le temps de réfléchir"}
         </p>
         <p className="how-it-works-step">
-          {lang === "en" ? "🎤  Say your answer when you see the mic" : "🎤  Dis ta réponse quand tu vois le micro"}
+          {lang === "en" ? "🎤  Say your answer out loud whenever you're ready" : "🎤  Dis ta réponse à voix haute quand tu es prêt"}
         </p>
       </div>
       <button className="start-btn" onClick={() => onStart(lang, grade)}>
@@ -119,7 +119,7 @@ function CountdownRing({ seconds, total, capturing }: { seconds: number; total: 
         />
       </svg>
       <div className="countdown-number" style={{ color: capturing ? "var(--correct)" : "var(--accent)" }}>
-        {capturing ? "🎤" : seconds}
+        {seconds > 0 ? seconds : "🎤"}
       </div>
     </div>
   )
@@ -135,8 +135,31 @@ function Waveform({ active }: { active: boolean }) {
   )
 }
 
-function SessionScreen({ session, phase, countdown, capturing, onRestart }: {
-  session: SessionState; phase: Phase; countdown: number; capturing: boolean; onRestart: () => void
+const MIC_ERROR_TEXT: Record<string, Record<Lang, string>> = {
+  "not-allowed": {
+    en: "MathVoice can't use your microphone. Click the icon left of the address bar and allow the microphone, then restart.",
+    fr: "MathVoice n'a pas accès au micro. Clique sur l'icône à gauche de l'adresse, autorise le micro, puis recommence.",
+  },
+  "service-not-allowed": {
+    en: "Speech recognition is blocked in this browser. Use Google Chrome.",
+    fr: "La reconnaissance vocale est bloquée dans ce navigateur. Utilise Google Chrome.",
+  },
+  "audio-capture": {
+    en: "No microphone was found. Check that one is connected and selected in Chrome's settings.",
+    fr: "Aucun micro détecté. Vérifie qu'un micro est branché et choisi dans les réglages de Chrome.",
+  },
+  "network": {
+    en: "Speech recognition needs an internet connection to Google. Check your connection or VPN.",
+    fr: "La reconnaissance vocale a besoin d'une connexion à Google. Vérifie ta connexion ou ton VPN.",
+  },
+  "unsupported": {
+    en: "This browser doesn't support speech recognition. Open MathVoice in Google Chrome.",
+    fr: "Ce navigateur ne gère pas la reconnaissance vocale. Ouvre MathVoice dans Google Chrome.",
+  },
+}
+
+function SessionScreen({ session, phase, countdown, capturing, micError, onRestart }: {
+  session: SessionState; phase: Phase; countdown: number; capturing: boolean; micError: string | null; onRestart: () => void
 }) {
   const q = session.questions[session.current]
   const isFinished = phase === "finished"
@@ -153,6 +176,11 @@ function SessionScreen({ session, phase, countdown, capturing, onRestart }: {
   return (
     <div className="session-screen">
       {!isFinished && <ProgressBar current={session.current} total={TOTAL_QUESTIONS} />}
+      {micError && (
+        <div className="mic-error" role="alert">
+          {(MIC_ERROR_TEXT[micError] || MIC_ERROR_TEXT["not-allowed"])[session.lang]}
+        </div>
+      )}
       <div className={`card ${phase === "feedback" ? (session.lastCorrect ? "card--correct" : "card--wrong") : ""} ${isFinished ? "card--finished" : ""}`}>
         {phase === "requesting_mic" && (
           <div className="question-inner">
@@ -187,9 +215,8 @@ function SessionScreen({ session, phase, countdown, capturing, onRestart }: {
             }
             <p className="phase-label">
               {phase === "question" && (session.lang === "en" ? "Listen carefully..." : "Écoute bien...")}
-              {phase === "countdown" && !capturing && (session.lang === "en" ? "Get ready to answer..." : "Prépare ta réponse...")}
-              {phase === "countdown" && capturing && (session.lang === "en" ? "Say your answer now!" : "Dis ta réponse!")}
-              {phase === "listening" && (session.lang === "en" ? "Listening..." : "J'écoute...")}
+              {phase === "countdown" && (session.lang === "en" ? "🎤 Listening: say your answer when you're ready" : "🎤 J'écoute : dis ta réponse quand tu es prêt")}
+              {phase === "listening" && (session.lang === "en" ? "🎤 Last few seconds: say your answer!" : "🎤 Dernières secondes : dis ta réponse!")}
               {phase === "feedback" && (session.lastCorrect ? "Correct! ✓" : (session.lang === "en" ? "Keep going! →" : "Continue! →"))}
               {phase === "greeting" && (session.lang === "en" ? "Get ready..." : "Prépare-toi...")}
             </p>
@@ -210,6 +237,7 @@ export default function MathVoice() {
   const [session, setSession] = useState<SessionState | null>(null)
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
   const [capturing, setCapturing] = useState(false)
+  const [micError, setMicError] = useState<string | null>(null)
   const { speak } = useElevenLabsTTS()
   const { listen } = useSpeechRecognition()
 
@@ -224,18 +252,28 @@ export default function MathVoice() {
   }, [])
 
   const runCountdownThenListen = useCallback(async (lang: Lang): Promise<string | null> => {
-    setCapturing(false)
-    for (let i = COUNTDOWN_SECONDS; i >= 1; i--) {
+    // The mic opens as soon as the question ends, so an answer given during
+    // the thinking time counts. The countdown is a visual guide, not a gate.
+    setCapturing(true)
+    setPhase("countdown")
+    let answered = false
+    const totalMs = COUNTDOWN_SECONDS * 1000 + CAPTURE_WINDOW_MS
+    const listening = listen(lang, totalMs, (t) => extractNumber(t) !== null).then((r) => {
+      answered = true
+      return r
+    })
+    for (let i = COUNTDOWN_SECONDS; i >= 1 && !answered; i--) {
       setCountdown(i)
-      setPhase("countdown")
       await new Promise(r => setTimeout(r, 1000))
     }
-    setCapturing(true)
-    setCountdown(0)
-    setPhase("listening")
-    const transcript = await listen(lang, CAPTURE_WINDOW_MS)
+    if (!answered) {
+      setCountdown(0)
+      setPhase("listening")
+    }
+    const result = await listening
     setCapturing(false)
-    return transcript
+    if (result.error) setMicError(result.error)
+    return result.transcript
   }, [listen])
 
   const runQuestion = useCallback(async (sess: SessionState, idx: number) => {
@@ -283,7 +321,9 @@ export default function MathVoice() {
     const newSession: SessionState = { lang, grade, questions, current: 0, score: 0, lastCorrect: null, endingText: "" }
     setSession(newSession)
     setPhase("requesting_mic")
-    await requestMicPermission()
+    setMicError(null)
+    const micOk = await requestMicPermission()
+    if (!micOk) setMicError("not-allowed")
     setPhase("greeting")
     await speak(pickRandom(GREETINGS[lang]), lang)
     runQuestion(newSession, 0)
@@ -293,6 +333,7 @@ export default function MathVoice() {
     setSession(null)
     setCountdown(COUNTDOWN_SECONDS)
     setCapturing(false)
+    setMicError(null)
     setPhase("setup")
   }, [])
 
@@ -302,7 +343,7 @@ export default function MathVoice() {
 
   return (
     <main className="app-shell">
-      <SessionScreen session={session} phase={phase} countdown={countdown} capturing={capturing} onRestart={restart} />
+      <SessionScreen session={session} phase={phase} countdown={countdown} capturing={capturing} micError={micError} onRestart={restart} />
     </main>
   )
 }

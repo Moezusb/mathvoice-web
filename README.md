@@ -26,16 +26,16 @@ ElevenLabs TTS voices the greeting (eleven_multilingual_v2)
        ↓
 ElevenLabs TTS voices the math question
        ↓
-7-second countdown ring, reflection time
+7-second countdown ring, reflection time (the mic is already listening)
        ↓
-4-second capture window, mic active, Web Speech API listens
+Mic listens from the end of the question through the countdown plus a 4-second window
        ↓
 Answer parsed → compared → ElevenLabs TTS voices feedback
        ↓
 Repeat for 5 questions → voiced score summary
 ```
 
-The mic is only active during the 4-second capture window, which reduces false triggers. When the window closes, MathVoice waits briefly for Chrome to finish transcribing, so an answer spoken near the end still counts.
+The mic opens as soon as the question finishes and stays open through the countdown and a final 4-second window, so a child can answer whenever they are ready. Listening restarts automatically if Chrome stops on silence, finishes as soon as a number is heard, and waits briefly for Chrome to finalize a late answer. If the microphone is blocked or missing, a message on screen says what to fix.
 
 ---
 
@@ -57,7 +57,7 @@ Browser
   ├── /api/tts (Next.js route)  →  ElevenLabs REST API  →  TTS voice output
   │     └── eleven_multilingual_v2, EN + FR
   └── Web Speech API            →  Speech-to-text input (browser native)
-        └── 4-second active capture window per question
+        └── listens through countdown + 4-second window
 
 No database. Stateless session.
 The ElevenLabs key lives server-side only. The browser never sees it.
