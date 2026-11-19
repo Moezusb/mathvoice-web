@@ -11,7 +11,7 @@ import {
 
 const TOTAL_QUESTIONS = 5
 const COUNTDOWN_SECONDS = 7
-const CAPTURE_WINDOW_MS = 2000
+const CAPTURE_WINDOW_MS = 4000
 
 type Phase =
   | "setup"
